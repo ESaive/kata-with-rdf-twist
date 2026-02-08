@@ -6,34 +6,24 @@ class GildedRose(object):
         self.items = items
 
     def update_quality(self):
-        for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
-                        item.quality = item.quality - 1
-            else:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
-                        if item.sell_in < 11:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
-                item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
-                                item.quality = item.quality - 1
-                    else:
-                        item.quality = item.quality - item.quality
-                else:
-                    if item.quality < 50:
-                        item.quality = item.quality + 1
+        # Use the RDF-backed item store to perform updates.
+        # This wraps existing Item objects into an RDF graph, runs the RDF-based
+        # update logic, then syncs the updated sell_in and quality values back
+        # into the original Item instances.
+        from rdf_store import RDFItemStore
+
+        store = RDFItemStore()
+        uri_item_pairs = []
+        for idx, item in enumerate(self.items):
+            uri = store.item_to_rdf(item, idx)
+            uri_item_pairs.append((uri, item))
+
+        # Perform RDF-based update
+        store.update_quality()
+
+        # Sync updated values back to Python Item objects
+        for uri, item in uri_item_pairs:
+            store.rdf_to_item(uri, item)
 
 
 class Item:
