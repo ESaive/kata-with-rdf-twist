@@ -52,4 +52,74 @@ gr:BackstagePass a gr:ItemType ;
     rdfs:label "Backstage Pass" ;
     rdfs:comment "Increases in quality as concert approaches, drops to 0 after" .
 
-# TODO: Add Conjured item type and any additional properties needed for business rules
+
+gr:Conjured a gr:ItemType ;
+    rdfs:label "Conjured Items" ;
+    rdfs:comment "items degrade in Quality twice as fast as normal items" .
+
+##################################
+# Business rule constraints - metadata properties
+##################################
+
+gr:maxQuality a rdf:Property ;
+    rdfs:domain gr:ItemType ;
+    rdfs:range xsd:integer .
+
+gr:minQuality a rdf:Property ;
+    rdfs:domain gr:ItemType ;
+    rdfs:range xsd:integer .
+
+gr:isLegendary a rdf:Property ;
+    rdfs:domain gr:ItemType ;
+    rdfs:range xsd:boolean .
+
+gr:qualityChange a rdf:Property ;
+    rdfs:domain gr:ItemType ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Daily quality change before sell date" .
+
+gr:qualityChangeAfterSellDate a rdf:Property ;
+    rdfs:domain gr:ItemType ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Daily quality change after sell date" .
+
+
+##################################
+# Item Types + rules
+##################################
+
+gr:Normal a gr:ItemType ;
+    rdfs:label "Normal Item" ;
+    gr:qualityChange -1 ;
+    gr:qualityChangeAfterSellDate -2 ;
+    gr:maxQuality 50 ;
+    gr:minQuality 0 ;
+    gr:isLegendary false .
+
+gr:AgedBrie a gr:ItemType ;
+    rdfs:label "Aged Brie" ;
+    gr:qualityChange 1 ;
+    gr:maxQuality 50 ;
+    gr:minQuality 0 ;
+    gr:isLegendary false .
+
+gr:Sulfuras a gr:ItemType ;
+    rdfs:label "Sulfuras" ;
+    gr:maxQuality 80 ;
+    gr:minQuality 80 ;
+    gr:isLegendary true .
+
+gr:BackstagePass a gr:ItemType ;
+    rdfs:label "Backstage Pass" ;
+    gr:maxQuality 50 ;
+    gr:minQuality 0 ;
+    gr:isLegendary false ;
+    rdfs:comment "Special staged increases handled in logic layer" .
+
+gr:Conjured a gr:ItemType ;
+    rdfs:label "Conjured Item" ;
+    gr:qualityChange -2 ;
+    gr:qualityChangeAfterSellDate -4 ;
+    gr:maxQuality 50 ;
+    gr:minQuality 0 ;
+    gr:isLegendary false .
