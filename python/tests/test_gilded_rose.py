@@ -67,6 +67,6 @@ class GildedRoseTest(unittest.TestCase):
         # conjured degrades by 2
         self.assertEqual(4, int(store.graph.value(uri, GR.quality)))
 
-        
+
 if __name__ == '__main__':
     unittest.main()

@@ -14,7 +14,7 @@ GR = Namespace("http://example.org/gilded-rose#")
 
 
 class RDFItemStore:
-    
+
     def __init__(self):
         """Initialize the RDF graph and load schema."""
         self.graph = Graph()
@@ -28,59 +28,59 @@ class RDFItemStore:
             GR.Conjured: self._handle_conjured,
             GR.Normal: self._handle_normal,
         }
-    
+
     def _load_schema(self):
         """Load the RDF schema from schema.ttl file."""
         self.graph.parse("python/schema.ttl", format="turtle")
 
-    
+
     def item_to_rdf(self, item, item_id: int) -> URIRef:
         """
         Convert an Item object to RDF triples and add to graph.
-        
+
         Args:
             item: The Item object to convert
             item_id: Unique identifier for the item
-            
+
         Returns:
             URIRef: The URI of the created item resource
-            
+
         """
         # Create a unique URI for the item
         item_uri = GR[f"item_{item_id}"]
-        
+
         # Add triples for item properties
         self.graph.add((item_uri, RDF.type, GR.Item))
         self.graph.add((item_uri, GR.name, Literal(item.name, datatype=XSD.string)))
         self.graph.add((item_uri, GR.sellIn, Literal(item.sell_in, datatype=XSD.integer)))
         self.graph.add((item_uri, GR.quality, Literal(item.quality, datatype=XSD.integer)))
-        
+
         # Determine and set the appropriate itemType based on name
         item_type = self._determine_item_type(item.name)
         self.graph.add((item_uri, GR.itemType, item_type))
-        
+
         return item_uri
-    
+
     def rdf_to_item(self, item_uri: URIRef, item):
         """
         Update an Item object with values from RDF graph.
-        
+
         Args:
             item_uri: The URI of the item in the RDF graph
             item: The Item object to update
-            
+
         """
         # Query the graph for sellIn and quality values
         sell_in_literal = self.graph.value(item_uri, GR.sellIn)
         quality_literal = self.graph.value(item_uri, GR.quality)
-        
+
         # Update the item object (name should not change)
         if sell_in_literal is not None:
             item.sell_in = int(sell_in_literal)
-        
+
         if quality_literal is not None:
             item.quality = int(quality_literal)
-    
+
     def update_quality(self):
         """
         Update quality and sellIn values for all items in the graph.
@@ -156,17 +156,17 @@ class RDFItemStore:
             q -= 1
         q = max(q, 0)
         return sell_in, q
-    
+
     def _determine_item_type(self, name: str) -> URIRef:
         """
         Determine the item type based on item name.
-        
+
         Args:
             name: The name of the item
-            
+
         Returns:
             URIRef: The item type URI
-            
+
         """
         if "Conjured" in name:
             return GR.Conjured
