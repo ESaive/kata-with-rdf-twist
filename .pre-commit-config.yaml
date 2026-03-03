@@ -1,0 +1,7 @@
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.15.4  # pin to the same ruff version used in the environment
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        additional_dependencies: []

@@ -181,6 +181,22 @@ Configure your preferred linting tools. The project supports multiple linters wi
 - `flake8` - Style guide enforcement
 - `autopep8` - Auto-formatter
 
+### Pre‑commit hooks
+
+To automatically lint files before every commit, we use [pre-commit](https://pre-commit.com) with a `ruff` hook. After you have created/activated the virtual environment and installed dependencies, run:
+
+```bash
+make precommit
+```
+
+This will install the hooks in `.git/hooks` and ensure `ruff --fix` is executed on changed Python files. You can manually invoke the hook suite at any time:
+
+```bash
+.venv/Scripts/pre-commit run --all-files
+```
+
+The configuration lives in `.pre-commit-config.yaml`; feel free to add other hooks (formatters, type checkers, etc.).
+
 ## Brownie Points: CI/CD & Development Best Practices
 
 While not required, we'd love to see you demonstrate clean and efficient development practices! Here are some areas where you can earn extra recognition:
