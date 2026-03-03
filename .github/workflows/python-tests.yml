@@ -1,0 +1,39 @@
+name: Python tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.13]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # install project dependencies (rdflib) and test requirements
+          pip install rdflib
+          pip install -r python/requirements.txt
+
+      - name: Run lint (ruff)
+        run: |
+          python -m pip install ruff
+          python -m ruff check .
+
+      - name: Run tests
+        run: |
+          python -m pytest python/tests
