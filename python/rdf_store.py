@@ -1,103 +1,173 @@
 # -*- coding: utf-8 -*-
 """
 RDF Store for Gilded Rose inventory management.
-
-This module provides utilities for converting Items to/from RDF representation
-and performing quality updates using RDF/SPARQL operations.
 """
 
-from rdflib import Graph, Namespace, Literal, URIRef
+import os
+from rdflib import Graph, Namespace, URIRef, Literal
 from rdflib.namespace import RDF, XSD
-
-# Define namespace for Gilded Rose ontology
-GR = Namespace("http://example.org/gilded-rose#")
 
 
 class RDFItemStore:
     """
-    Manages items as RDF triples and provides methods for quality updates.
-    
-    TODO: Implement the following methods to complete the RDF-based system:
-    - item_to_rdf: Convert an Item object to RDF triples
-    - rdf_to_item: Update an Item object from RDF triples
-    - update_quality: Implement quality update logic using RDF/SPARQL
+    Manages items as RDF triples and updates them using SPARQL rules.
     """
-    
-    def __init__(self):
-        """Initialize the RDF graph and load schema."""
+
+    def __init__(self, schema_path=None):
         self.graph = Graph()
-        self.graph.bind("gr", GR)
-        self._load_schema()
-    
-    def _load_schema(self):
-        """Load the RDF schema from schema.ttl file."""
-        # TODO: Load schema.ttl into the graph
-        # Hint: self.graph.parse("python/schema.ttl", format="turtle")
-        pass
-    
-    def item_to_rdf(self, item, item_id: int) -> URIRef:
-        """
-        Convert an Item object to RDF triples and add to graph.
-        
-        Args:
-            item: The Item object to convert
-            item_id: Unique identifier for the item
-            
-        Returns:
-            URIRef: The URI of the created item resource
-            
-        TODO: Implement this method
-        - Create a unique URI for the item
-        - Add triples for name, sellIn, quality
-        - Determine and set the appropriate itemType based on name
-        """
-        pass
-    
-    def rdf_to_item(self, item_uri: URIRef, item):
-        """
-        Update an Item object with values from RDF graph.
-        
-        Args:
-            item_uri: The URI of the item in the RDF graph
-            item: The Item object to update
-            
-        TODO: Implement this method
-        - Query the graph for sellIn and quality values
-        - Update the item object (name should not change)
-        """
-        pass
-    
-    def update_quality(self):
-        """
-        Update quality and sellIn values for all items in the graph.
-        
-        TODO: Implement the business logic using RDF operations
-        You can use:
-        - SPARQL UPDATE queries
-        - Python iteration over graph triples
-        - A combination of both
-        
-        Remember the rules from GildedRoseRequirements.md:
-        - Normal items: quality decreases by 1 (by 2 after sell date)
-        - Aged Brie: quality increases
-        - Sulfuras: never changes
-        - Backstage passes: complex quality increase, drops to 0 after concert
-        - Conjured: quality decreases by 2 (by 4 after sell date)
-        - Quality bounds: 0 <= quality <= 50 (except Sulfuras at 80)
-        """
-        pass
-    
-    def _determine_item_type(self, name: str) -> URIRef:
-        """
-        Determine the item type based on item name.
-        
-        Args:
-            name: The name of the item
-            
-        Returns:
-            URIRef: The item type URI
-            
-        TODO: Implement logic to map item names to types
-        Hint: Use string matching on the name
-        """
-        pass
+
+        self.GR = Namespace("http://example.org/gilded-rose#")
+        self.graph.bind("gr", self.GR)
+
+        if schema_path is None:
+            schema_path = os.path.join(os.path.dirname(__file__), "schema.ttl")
+
+        self.graph.parse(schema_path, format="turtle")
+
+    # Convert Python Item -> RDF
+    def item_to_rdf(self, item, index):
+        uri = URIRef(f"http://example.org/item/{index}")
+
+        self.graph.add((uri, RDF.type, self.GR.Item))
+        self.graph.add((uri, self.GR.name, Literal(item.name)))
+        self.graph.add((uri, self.GR.sellIn, Literal(item.sell_in, datatype=XSD.integer)))
+        self.graph.add((uri, self.GR.quality, Literal(item.quality, datatype=XSD.integer)))
+
+        if item.name == "Aged Brie":
+            item_type = self.GR.AgedBrie
+        elif item.name == "Backstage passes to a TAFKAL80ETC concert":
+            item_type = self.GR.BackstagePass
+        elif item.name == "Sulfuras, Hand of Ragnaros":
+            item_type = self.GR.Sulfuras
+        elif "Conjured" in item.name:
+            item_type = self.GR.Conjured
+        else:
+            item_type = self.GR.NormalItem
+
+        self.graph.add((uri, self.GR.itemType, item_type))
+        return uri
+
+    # Convert RDF -> Python Item
+    def rdf_to_item(self, item, uri):
+        sell_in = self.graph.value(uri, self.GR.sellIn)
+        quality = self.graph.value(uri, self.GR.quality)
+
+        if sell_in is not None:
+            item.sell_in = int(sell_in)
+
+        if quality is not None:
+            item.quality = int(quality)
+
+    # Decrease sellIn (except Sulfuras)
+    def _update_sellin(self):
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+
+        DELETE { ?item gr:sellIn ?s }
+        INSERT { ?item gr:sellIn ?newS }
+        WHERE {
+            ?item gr:sellIn ?s .
+            ?item gr:itemType ?type .
+            FILTER (?type != gr:Sulfuras)
+            BIND(?s - 1 AS ?newS)
+        }
+        """)
+
+    # Normal items
+    def _update_normal_items(self):
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+
+        DELETE { ?item gr:quality ?q }
+        INSERT { ?item gr:quality ?newQ }
+        WHERE {
+            ?item gr:itemType gr:NormalItem .
+            ?item gr:quality ?q .
+            ?item gr:sellIn ?s .
+
+            BIND(IF(?s < 0, ?q - 2, ?q - 1) AS ?tempQ)
+            BIND(IF(?tempQ < 0, 0, ?tempQ) AS ?newQ)
+        }
+        """)
+
+    # Aged Brie
+    def _update_aged_brie(self):
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+
+        DELETE { ?item gr:quality ?q }
+        INSERT { ?item gr:quality ?newQ }
+        WHERE {
+            ?item gr:itemType gr:AgedBrie .
+            ?item gr:quality ?q .
+            ?item gr:sellIn ?s .
+
+            BIND(IF(?s < 0, ?q + 2, ?q + 1) AS ?tempQ)
+            BIND(IF(?tempQ > 50, 50, ?tempQ) AS ?newQ)
+        }
+        """)
+
+    # Backstage passes
+    def _update_backstage(self):
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+
+        DELETE { ?item gr:quality ?q }
+        INSERT { ?item gr:quality ?newQ }
+        WHERE {
+            ?item gr:itemType gr:BackstagePass .
+            ?item gr:quality ?q .
+            ?item gr:sellIn ?s .
+
+            BIND(
+                IF(?s < 0, 0,
+                    IF(?s < 5, ?q + 3,
+                        IF(?s < 10, ?q + 2,
+                            ?q + 1)))
+                AS ?tempQ
+            )
+
+            BIND(IF(?tempQ > 50, 50, ?tempQ) AS ?newQ)
+        }
+        """)
+
+    # Conjured items
+    def _update_conjured(self):
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+
+        DELETE { ?item gr:quality ?q }
+        INSERT { ?item gr:quality ?newQ }
+        WHERE {
+            ?item gr:itemType gr:Conjured .
+            ?item gr:quality ?q .
+            ?item gr:sellIn ?s .
+
+            BIND(IF(?s < 0, ?q - 4, ?q - 2) AS ?tempQ)
+            BIND(IF(?tempQ < 0, 0, ?tempQ) AS ?newQ)
+        }
+        """)
+
+    # Main update function
+    def update_quality(self, items):
+
+        self.graph.update("""
+        PREFIX gr: <http://example.org/gilded-rose#>
+        DELETE { ?s ?p ?o }
+        WHERE  { ?s a gr:Item ; ?p ?o }
+        """)
+
+        uris = []
+
+        for i, item in enumerate(items):
+            uri = self.item_to_rdf(item, i)
+            uris.append((item, uri))
+
+        self._update_sellin()
+        self._update_normal_items()
+        self._update_aged_brie()
+        self._update_backstage()
+        self._update_conjured()
+
+        for item, uri in uris:
+            self.rdf_to_item(item, uri)
