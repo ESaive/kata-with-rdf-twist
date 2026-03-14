@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 RDF Store for Gilded Rose inventory management.
+
+This represents inventory items as RDF triples and applies SPARQL
+rules to update them. The RDF graph is used only as a temporary structure
+to apply declarative update logic.
+The authoritative state of the inventory remains in the Python item objects.
+The RDF graph is rebuilt for each simulation step and is not used as a
+persistent storage backend
 """
 
 import os
@@ -22,6 +29,12 @@ class RDFItemStore:
         if schema_path is None:
             schema_path = os.path.join(os.path.dirname(__file__), "schema.ttl")
 
+        # Load RDF vocabulary definitions (Item, ItemType, properties, etc.)
+        # The schema provides metadata describing item types such as
+        # AgedBrie, NormalItem, Sulfuras, BackstagePass, and Conjured.
+        #
+        # This graph is used temporarily during updates to apply SPARQL rules.
+        # It is not used as a persistent backend for storing simulation state.
         self.graph.parse(schema_path, format="turtle")
 
     # Convert Python Item -> RDF
@@ -33,12 +46,15 @@ class RDFItemStore:
         self.graph.add((uri, self.GR.sellIn, Literal(item.sell_in, datatype=XSD.integer)))
         self.graph.add((uri, self.GR.quality, Literal(item.quality, datatype=XSD.integer)))
 
+        # Determine item type using vocabulary classes
         if item.name == "Aged Brie":
             item_type = self.GR.AgedBrie
         elif item.name == "Backstage passes to a TAFKAL80ETC concert":
             item_type = self.GR.BackstagePass
         elif item.name == "Sulfuras, Hand of Ragnaros":
             item_type = self.GR.Sulfuras
+
+        # Conjured items reference the ItemType defined in the RDF vocabulary
         elif "Conjured" in item.name:
             item_type = self.GR.Conjured
         else:
@@ -151,6 +167,10 @@ class RDFItemStore:
     # Main update function
     def update_quality(self, items):
 
+        # Rebuild the RDF graph for the current simulation step.
+        # The graph is used only to apply SPARQL rules for this step,
+        # while the authoritative state remains in the Python objects.
+
         self.graph.update("""
         PREFIX gr: <http://example.org/gilded-rose#>
         DELETE { ?s ?p ?o }
@@ -163,11 +183,13 @@ class RDFItemStore:
             uri = self.item_to_rdf(item, i)
             uris.append((item, uri))
 
+        # Apply update rules
         self._update_sellin()
         self._update_normal_items()
         self._update_aged_brie()
         self._update_backstage()
         self._update_conjured()
 
+        # Sync RDF results back to Python objects
         for item, uri in uris:
             self.rdf_to_item(item, uri)

@@ -79,3 +79,6 @@ gr:Sulfuras a gr:ItemType ;
     rdfs:label "Sulfuras" ;
     rdfs:comment "Legendary item that never changes" .
 
+gr:Conjured a gr:ItemType ;
+    rdfs:label "Conjured Item" ;
+    rdfs:comment "Items that degrade in quality twice as fast as normal items" .
