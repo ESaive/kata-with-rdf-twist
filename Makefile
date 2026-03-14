@@ -13,12 +13,11 @@ $(VENV): pyproject.toml
 	@uv self update || true
 	@uv venv --python ${PYTHON_VERSION} --python-fetch automatic --python-preference only-managed --link-mode=copy -q
 	@uv sync --all-groups --link-mode=copy
-
 test: $(VENV) ## run all tests
-	@echo "TODO: Add test commands here"
+	cd python && pytest
 
 test-python: $(VENV) ## run python tests
-	pytest python/tests/
-	
-lint: $(VENV) ## Linting - only report issues, don't fix
-	@echo "TODO: Add linting commands here"
+	cd python && pytest tests
+
+lint: $(VENV) #Linting-only report issues
+	cd python && python -m pyflakes . 

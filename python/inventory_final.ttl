@@ -1,0 +1,84 @@
+@prefix gr: <http://example.org/gilded-rose#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+gr:Item a rdfs:Class ;
+    rdfs:label "Item" ;
+    rdfs:comment "An item in the Gilded Rose inventory" .
+
+gr:ItemType a rdfs:Class ;
+    rdfs:label "Item Type" ;
+    rdfs:comment "A category of items with specific update rules" .
+
+gr:itemType a rdf:Property ;
+    rdfs:label "item type" ;
+    rdfs:domain gr:Item ;
+    rdfs:range gr:ItemType .
+
+gr:name a rdf:Property ;
+    rdfs:label "name" ;
+    rdfs:domain gr:Item ;
+    rdfs:range xsd:string .
+
+gr:quality a rdf:Property ;
+    rdfs:label "quality" ;
+    rdfs:comment "Quality value of the item" ;
+    rdfs:domain gr:Item ;
+    rdfs:range xsd:integer .
+
+gr:sellIn a rdf:Property ;
+    rdfs:label "sell in" ;
+    rdfs:comment "Number of days to sell the item" ;
+    rdfs:domain gr:Item ;
+    rdfs:range xsd:integer .
+
+<http://example.org/item/0> a gr:Item ;
+    gr:itemType gr:AgedBrie ;
+    gr:name "Aged Brie" ;
+    gr:quality 28 ;
+    gr:sellIn -13 .
+
+<http://example.org/item/1> a gr:Item ;
+    gr:itemType gr:Conjured ;
+    gr:name "Conjured Mana Cake" ;
+    gr:quality 0 ;
+    gr:sellIn -12 .
+
+<http://example.org/item/2> a gr:Item ;
+    gr:itemType gr:NormalItem ;
+    gr:name "+5 Dexterity Vest" ;
+    gr:quality 0 ;
+    gr:sellIn -5 .
+
+<http://example.org/item/3> a gr:Item ;
+    gr:itemType gr:BackstagePass ;
+    gr:name "Backstage passes to a TAFKAL80ETC concert" ;
+    gr:quality 50 ;
+    gr:sellIn 0 .
+
+<http://example.org/item/4> a gr:Item ;
+    gr:itemType gr:Sulfuras ;
+    gr:name "Sulfuras, Hand of Ragnaros" ;
+    gr:quality 80 ;
+    gr:sellIn 0 .
+
+gr:AgedBrie a gr:ItemType ;
+    rdfs:label "Aged Brie" ;
+    rdfs:comment "Increases in quality over time" .
+
+gr:BackstagePass a gr:ItemType ;
+    rdfs:label "Backstage Pass" ;
+    rdfs:comment "Increases in quality as concert approaches, drops to 0 after" .
+
+gr:NormalItem a gr:ItemType ;
+    rdfs:label "Normal Item" ;
+    rdfs:comment "Standard items that degrade in quality" .
+
+gr:Sulfuras a gr:ItemType ;
+    rdfs:label "Sulfuras" ;
+    rdfs:comment "Legendary item that never changes" .
+
+gr:Conjured a gr:ItemType ;
+    rdfs:label "Conjured Item" ;
+    rdfs:comment "Items that degrade in quality twice as fast as normal items" .
